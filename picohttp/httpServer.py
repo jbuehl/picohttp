@@ -97,6 +97,7 @@ class HttpServer(object):
         clientFile.close()
 
     def sendResponse(self, client, response):
+        clientIp = client.getpeername()[0]
         if response.data:
             response.headers["Content-Length"] = len(response.data)
         else:
@@ -117,7 +118,7 @@ class HttpServer(object):
                 else:
                     client.send(response.data)
         except BrokenPipeError:     # can't do anything about this
-            log("sendResponse", "broken pipe", client.getpeername())
+            log("sendResponse", "broken pipe", clientIp)
             return
 
     def debugRequest(self, addr, request):
