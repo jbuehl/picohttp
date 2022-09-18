@@ -106,15 +106,19 @@ class HttpServer(object):
             reason = http.client.responses[response.status]
         except KeyError:
             reason = ""
-        client.send(bytes(response.protocol+" "+str(response.status)+" "+reason+"\n", "utf-8"))
-        for header in response.headers:
-            client.send(bytes(header+": "+str(response.headers[header])+"\n", "utf-8"))
-        client.send(bytes("\n", "utf-8"))
-        if response.data:
-            if isinstance(response.data, str):
-                client.send(bytes(response.data, "utf-8"))
-            else:
-                client.send(response.data)
+        try:
+            client.send(bytes(response.protocol+" "+str(response.status)+" "+reason+"\n", "utf-8"))
+            for header in response.headers:
+                client.send(bytes(header+": "+str(response.headers[header])+"\n", "utf-8"))
+            client.send(bytes("\n", "utf-8"))
+            if response.data:
+                if isinstance(response.data, str):
+                    client.send(bytes(response.data, "utf-8"))
+                else:
+                    client.send(response.data)
+        except BrokenPipeError:     # can't do anything about this
+            log("sendResponse", "broken pipe", client.getpeername())
+            return
 
     def debugRequest(self, addr, request):
         debug("debugHttpServer", "request from", addr)
