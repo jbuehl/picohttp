@@ -6,23 +6,8 @@ import mimetypes
 import http.client
 import urllib.parse
 from rutifu import *
+from .httpClasses import *
 from .staticResource import *
-
-class HttpRequest(object):
-    def __init__(self, method="", path=[], query={}, protocol="", headers={}, data=None):
-        self.method = method
-        self.path = path
-        self.query = query
-        self.protocol = protocol
-        self.headers = headers
-        self.data = data
-
-class HttpResponse(object):
-    def __init__(self, protocol, status=200, headers={}, data=None):
-        self.protocol = protocol
-        self.status = status
-        self.headers = headers
-        self.data = data
 
 class HttpServer(object):
     def __init__(self, port=80, handler=staticResource, args=(), threads=True, block=True, start=True):
@@ -36,7 +21,7 @@ class HttpServer(object):
             self.start()
 
     def start(self):
-        debug("debugHttpServer", "httpserver", "starting")
+        debug("debugHttpServer", "httpServer", "starting")
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(("", self.port))
@@ -59,7 +44,7 @@ class HttpServer(object):
     def handleConnection(self, client, addr):
         request = HttpRequest()
         self.parseRequest(client, request)
-        self.debugRequest(addr, request)
+        debugRequest("debugHttpServer", addr, request)
         # send it to the request handler
         response = HttpResponse("HTTP/1.0", 200, {}, None)
         try:
@@ -69,7 +54,7 @@ class HttpServer(object):
             response.status = 500
             response.data = str(ex)+"\n"
         self.sendResponse(client, response)
-        self.debugResponse(addr, response)
+        debugResponse("debugHttpServer", addr, response)
         client.close()
 
     def parseRequest(self, client, request):
@@ -92,7 +77,7 @@ class HttpServer(object):
             (headerName, headerValue) = fixedList(clientFile.readline().strip("\n").split(":"), 2, "")
         # read the data
         try:
-            request.data = clientFile.read(int(request.headers["Content-Length"]))
+            request.data = urllib.parse.unquote(clientFile.read(int(request.headers["Content-Length"])))
         except KeyError:
             request.data = None
         clientFile.close()
@@ -121,18 +106,3 @@ class HttpServer(object):
         except BrokenPipeError:     # can't do anything about this
             log("sendResponse", "broken pipe", clientIp)
             return
-
-    def debugRequest(self, addr, request):
-        debug("debugHttpServer", "request from", addr)
-        debug("debugHttpServer", "  method:", request.method, "protocol:", request.protocol)
-        debug("debugHttpServer", "  path:", request.path, "query:", request.query)
-        debug("debugHttpServer", "  headers:")
-        for (header, value) in request.headers.items():
-            debug("debugHttpServer", "    ", header+":", value)
-
-    def debugResponse(self, addr, response):
-        debug("debugHttpServer", "response to", addr)
-        debug("debugHttpServer", "  protocol:", response.protocol, "status:", response.status)
-        debug("debugHttpServer", "  headers:")
-        for (header, value) in response.headers.items():
-            debug("debugHttpServer", "    ", header+":", value)
