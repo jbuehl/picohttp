@@ -22,9 +22,10 @@ class HttpClient(object):
 
     def sendRequest(self, request):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        addr = self.host+":"+str(self.port)
         try:
             self.socket.connect((self.host, self.port))
-            debug("debugHttpClient", "opened socket to", self.host, "on port", self.port)
+            debug("debugHttpClient", "opened socket to", addr)
             # send the request
             uri = request.path
             sep = "?"
@@ -41,7 +42,7 @@ class HttpClient(object):
                 msg += request.data
             else:
                 msg += "\n"
-            debugRequest("debugHttpClient", self.host, request)
+            debugRequest("debugHttpClient", addr, request)
             self.socket.sendall(bytes(msg, "utf-8"))
             # read the response
             serverFile = self.socket.makefile()
@@ -56,10 +57,16 @@ class HttpClient(object):
                 data = serverFile.read(int(headers["Content-Length"]))
             except KeyError:
                 data = None
+            try:
+                status = int(status)
+            except ValueError:
+                log("httpClient", addr, "bad status:", status, "protocol:", protocol)
+                status = 0
             response = HttpResponse(protocol, int(status), headers, data)
-            debugResponse("debugHttpClient", self.host, response)
+            debugResponse("debugHttpClient", addr, response)
             serverFile.close()
             self.socket.close()
             return response
         except Exception as ex:
-            logException("httpClient", ex)
+            logException("httpClient "+addr, ex)
+            raise
