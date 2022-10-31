@@ -21,9 +21,9 @@ class HttpClient(object):
         return self.sendRequest(HttpRequest("DELETE", path, query, "HTTP/1.0", headers))
 
     def sendRequest(self, request):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        addr = self.host+":"+str(self.port)
         try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            addr = self.host+":"+str(self.port)
             self.socket.connect((self.host, self.port))
             debug("debugHttpClient", "opened socket to", addr)
             # send the request
@@ -68,5 +68,5 @@ class HttpClient(object):
             self.socket.close()
             return response
         except Exception as ex:
-            logException("httpClient "+addr, ex)
-            raise
+            # logException("httpClient "+addr, ex)
+            return HttpResponse("", 0, {}, str(ex))
