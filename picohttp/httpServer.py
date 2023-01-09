@@ -10,11 +10,13 @@ from .httpClasses import *
 from .staticResource import *
 
 class HttpServer(object):
-    def __init__(self, port=80, handler=staticResource, args=(), threads=True, block=True, start=True):
-        self.port = port
+    def __init__(self, port=80, handler=staticResource, args=(), threads=True, reuse=True, block=True, start=True):
+        self.ports = listize(port)
+        self.port = 0
         self.handler = handler
         self.args = args
         self.threads = threads
+        self.reuse = reuse
         self.block = block
         self.socket = None
         if start:
@@ -23,13 +25,27 @@ class HttpServer(object):
     def start(self):
         debug("debugHttpServer", "httpServer", "starting")
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind(("", self.port))
-        debug("debugHttpServer", "opened socket on port", self.port)
-        self.socket.listen(1)
-        startThread("httpserver", self.getRequests)
-        if self.block:
-            block()
+        if self.reuse:
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        for port in self.ports:
+            try:
+                debug("debugHttpServer", "trying port", port)
+                self.socket.bind(("", port))
+                self.port = port
+                debug("debugHttpServer", "opened socket on port", self.port)
+                break
+            except OSError:
+                pass
+        if self.port:
+            self.socket.listen(1)
+            startThread("httpserver", self.getRequests)
+            if self.block:
+                block()
+            return self.port
+        else:
+            self.socket.close()
+            log("httpServer", "unable to find an available port")
+            return 0
 
     # wait for requests
     def getRequests(self):
