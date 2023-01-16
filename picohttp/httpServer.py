@@ -59,7 +59,7 @@ class HttpServer(object):
 
     def handleConnection(self, client, addr):
         request = HttpRequest()
-        self.parseRequest(client, request)
+        self.parseRequest(client, addr, request)
         debugRequest("debugHttpServer", addr, request)
         # send it to the request handler
         response = HttpResponse("HTTP/1.0", 200, {}, None)
@@ -69,11 +69,11 @@ class HttpServer(object):
             logException("exception in request handler", ex)
             response.status = 500
             response.data = str(ex)+"\n"
-        self.sendResponse(client, response)
+        self.sendResponse(client, addr, response)
         debugResponse("debugHttpServer", addr, response)
         client.close()
 
-    def parseRequest(self, client, request):
+    def parseRequest(self, client, addr, request):
         clientFile = client.makefile()
         # start a new request
         (request.method, uri, request.protocol) = fixedList(urllib.parse.unquote(clientFile.readline()).strip("\n").split(" "), 3, "")
@@ -98,8 +98,7 @@ class HttpServer(object):
             request.data = None
         clientFile.close()
 
-    def sendResponse(self, client, response):
-        clientIp = client.getpeername()[0]
+    def sendResponse(self, client, addr, response):
         if response.data:
             response.headers["Content-Length"] = len(response.data)
         else:
@@ -120,5 +119,5 @@ class HttpServer(object):
                 else:
                     client.send(response.data)
         except BrokenPipeError:     # can't do anything about this
-            log("sendResponse", "broken pipe", clientIp)
+            log("sendResponse", "broken pipe", addr[0])
             return
