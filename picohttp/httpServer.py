@@ -76,10 +76,10 @@ class HttpServer(object):
     def parseRequest(self, client, addr, request):
         clientFile = client.makefile()
         # start a new request
-        (request.method, uri, request.protocol) = fixedList(urllib.parse.unquote(clientFile.readline()).strip("\n").split(" "), 3, "")
+        (request.method, uri, request.protocol) = fixedList(clientFile.readline().strip("\n").split(" "), 3, "")
         # parse the path string into components
         try:
-            (pathStr, queryStr) = uri.split("?")
+            (pathStr, queryStr) = urllib.parse.unquote(uri).split("?")
             request.query = dict([fixedList(queryItem.split("="), 2) for queryItem in queryStr.split("&")])
         except ValueError:
             pathStr = uri
